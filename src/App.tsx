@@ -1,127 +1,39 @@
-import { useState, useEffect } from 'react';
-import { AuthScreen } from './components/AuthScreen';
-import { Dashboard } from './components/Dashboard';
-import { RoutePlanner } from './components/RoutePlanner';
-import { JourneyTracker } from './components/JourneyTracker';
-import { JourneyHistory } from './components/JourneyHistory';
-import { ProfileScreen } from './components/ProfileScreen';
-import { LeaderboardScreen } from './components/LeaderboardScreen';
-import { BottomNav } from './components/BottomNav';
-import { WelcomeModal } from './components/WelcomeModal';
-import { Toaster } from './components/ui/sonner';
-import { setAccessToken } from './utils/api';
-import { getSupabaseClient } from './utils/supabase/client';
-import type { RouteOption } from './types';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+import RoutePlanner from "./pages/RoutePlanner";
+import Progress from "./pages/Progress";
+import Profile from "./pages/Profile";
+import Auth from "./pages/Auth";
+import Leaderboard from "./pages/Leaderboard";
+import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
 
-export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState('home');
-  const [activeRoute, setActiveRoute] = useState<RouteOption | null>(null);
-  const [journeyDetails, setJourneyDetails] = useState<{ from: string; to: string } | null>(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const [showWelcome, setShowWelcome] = useState(false);
+const queryClient = new QueryClient();
 
-  useEffect(() => {
-    checkExistingSession();
-  }, []);
-
-  const checkExistingSession = async () => {
-    const supabase = getSupabaseClient();
-
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session?.access_token) {
-      setAccessToken(session.access_token);
-      setIsAuthenticated(true);
-    }
-    
-    setCheckingAuth(false);
-  };
-
-  const handleAuthSuccess = (token: string) => {
-    setAccessToken(token);
-    setIsAuthenticated(true);
-    setShowWelcome(true);
-  };
-
-  const handleLogout = () => {
-    setAccessToken(null);
-    setIsAuthenticated(false);
-    setActiveTab('home');
-    setActiveRoute(null);
-  };
-
-  const handleStartJourney = () => {
-    setActiveTab('plan');
-  };
-
-  const handleViewHistory = () => {
-    setActiveTab('history');
-  };
-
-  const handleSelectRoute = (route: RouteOption, from: string, to: string) => {
-    setJourneyDetails({ from, to });
-    setActiveRoute(route);
-  };
-
-  const handleCompleteJourney = () => {
-    setActiveRoute(null);
-    setJourneyDetails(null);
-    setActiveTab('home');
-  };
-
-  const handleCancelJourney = () => {
-    setActiveRoute(null);
-    setJourneyDetails(null);
-  };
-
-  if (checkingAuth) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Green Münster...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <>
-        <AuthScreen onAuthSuccess={handleAuthSuccess} />
-        <Toaster />
-      </>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-lg mx-auto bg-white min-h-screen">
-        <div className="p-4">
-          {activeRoute && journeyDetails ? (
-            <JourneyTracker
-              route={activeRoute}
-              from={journeyDetails.from}
-              to={journeyDetails.to}
-              onComplete={handleCompleteJourney}
-              onCancel={handleCancelJourney}
-            />
-          ) : (
-            <>
-              {activeTab === 'home' && <Dashboard onStartJourney={handleStartJourney} onViewHistory={handleViewHistory} />}
-              {activeTab === 'plan' && <RoutePlanner onSelectRoute={handleSelectRoute} />}
-              {activeTab === 'history' && <JourneyHistory />}
-              {activeTab === 'leaderboard' && <LeaderboardScreen />}
-              {activeTab === 'profile' && <ProfileScreen onLogout={handleLogout} />}
-            </>
-          )}
-        </div>
-        
-        {!activeRoute && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
-      </div>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
       <Toaster />
-      {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
-    </div>
-  );
-}
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/planner" element={<RoutePlanner />} />
+          <Route path="/progress" element={<Progress />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/settings" element={<Settings />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+export default App;
